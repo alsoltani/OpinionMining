@@ -1,6 +1,7 @@
 import networkx as nx
 import numpy as np
 import math
+from collections import Counter
 
 
 def create_graph_features(n_documents, clean_train_documents, unique_words, 
@@ -44,7 +45,7 @@ def create_graph_features(n_documents, clean_train_documents, unique_words,
             # Put the count in term_num_docs.
             
             if len(word_list_2) > 1:
-                count_words(word_list_2, term_num_docs) 
+                count_words(word_list_2, term_num_docs)
         
         # Calculate the idf for all words.
 
@@ -82,7 +83,7 @@ def create_graph_features(n_documents, clean_train_documents, unique_words,
 
             # For all nodes
             #   If they are in the desired features
-            #       compute the TW-IDF score and put it in features[i,unique_words.index(g)].
+            #       compute the TWIDF score and put it in features[i,unique_words.index(g)].
             
             for k, node_term in enumerate(dg.nodes()):
                 if node_term in idf_col:
@@ -138,7 +139,7 @@ def count_words(word_list, term_num_docs):
     :param term_num_docs: 
     :return: 
     """
-    
+
     found = set()
 
     for k, word in enumerate(word_list):

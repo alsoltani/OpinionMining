@@ -17,21 +17,26 @@ def review_to_words(raw_review, remove_stopwords=False):
     :return: string (a preprocessed movie review).
     """
 
-    # 1. Remove HTML
+    # Remove HTML
     review_text = BeautifulSoup(raw_review, "html.parser").get_text()
-    #
-    # 2. Remove non-letters
-    letters_only = re.sub("[^a-zA-Z]", " ", review_text)
-    #
-    # 3. Convert to lower case, split into individual words
-    words = letters_only.lower().split()
 
-    # 4. Optionally remove stop words (false by default)
+    # Replace abbreviations
+    review_text = review_text\
+        .replace("'ve", " have")\
+        .replace()
+
+    # Remove non-alphanumeric characters
+    alphanumeric = re.sub(r"\W+", " ", review_text)
+
+    # Convert to lower case, split into individual words
+    words = alphanumeric.lower().split()
+
+    # Optionally remove stop words (false by default, not used in Doc2Vec)
     if remove_stopwords:
         stops = set(stopwords.words("english"))
         words = [w for w in words if w not in stops]
 
-    # 5. Return the processed document as a string.
+    # Return the processed document as a string.
     return " ".join(words)
 
 
@@ -91,4 +96,4 @@ def pre_process_unlabeled(save=True, remove_stopwords=False):
 
 if __name__ == "__main__":
 
-    pre_process_unlabeled()
+    pre_process_labeled()

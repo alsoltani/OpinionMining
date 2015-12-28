@@ -7,10 +7,10 @@ class Doc2VecModel:
     def __init__(self,
                  min_count=1,
                  window=10,
-                 size=400,
+                 size=100,
                  sample=1e-4,
                  negative=5,
-                 workers=8):
+                 workers=11):
 
         """
         Set up Doc2Vec parameters.
@@ -39,22 +39,32 @@ class Doc2VecModel:
         self.sentences = None
         self.model = None
 
-    def train(self, n_epochs=20):
+    def train(self, n_epochs=10):
 
         # Import processed sentences.
         sources = {"PositiveExamples.txt": "TRAIN_POS",
                    "NegativeExamples.txt": "TRAIN_NEG",
-                   "Unlabeled.txt": "TEST_UNSUP"}
+                   #"IMDB_Unlabeled.txt": "TRAIN_UNSUP",
+                   #"Unlabeled.txt": "TEST_UNSUP"
+                   }
         self.sentences = LabeledLineSentence(sources)
 
         # Build Doc2Vec vocabulary.
         self.model = Doc2Vec(min_count=self.min_count, window=self.window, size=self.size,
-                             sample=self.sample, negative=self.negative, workers=self.workers)
+                             sample=self.sample, negative=self.negative, workers=self.workers,
+                             #alpha=0.025, min_alpha=0.025
+                             )
         self.model.build_vocab(self.sentences.to_array())
 
         # Train model.
         for epoch in range(n_epochs):
+
+            print "Training : Epoch", epoch
+
             self.model.train(self.sentences.sentences_perm())
+            #self.model.alpha -= 0.002  # decrease the learning rate
+            #self.model.min_alpha = self.model.alpha  # fix the learning rate, no decay.
+            #self.model.train(self.sentences.sentences_perm())
 
     def save(self, file_name="Doc2VecModel.d2v"):
 
