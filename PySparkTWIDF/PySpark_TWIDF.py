@@ -4,7 +4,7 @@ import sys
 import math
 import string
 import networkx as nx
-import Utility.LoadFiles as lF
+import LoadFiles as lF
 from functools import partial
 from nltk.corpus import stopwords
 from sklearn.cross_validation import train_test_split
@@ -25,10 +25,10 @@ try:
     from pyspark.mllib.classification import LogisticRegressionWithSGD
     from pyspark.mllib.feature import PCA
 
-    print ("Successfully imported PySparkTWIDF Modules")
+    print ("Successfully imported Spark Modules")
 
 except ImportError as e:
-    print ("Can not import PySparkTWIDF Modules", e)
+    print ("Cannot import Spark Modules", e)
     sys.exit(1)
 
 # Pre-processing tools.
@@ -146,6 +146,8 @@ if __name__ == "__main__":
     sc = SparkContext("local", "TW-IDF App", pyFiles=['PySparkTWIDF/Preprocessing.py', 'PySparkTWIDF/LoadFiles.py'])
     current_path = os.getcwd()
 
+    print "Loading data..."
+
     data, Y = lF.load_labeled(current_path + "/Data/train")
     data_train, data_test, labels_train, labels_test = train_test_split(data, Y, test_size=0.2, random_state=42)
     data_rdd = sc.parallelize(data_train, numSlices=16)
@@ -153,6 +155,8 @@ if __name__ == "__main__":
     # Map data to a binary matrix.
     # Get the dictionary of the data.
     # ---------------------
+
+    print "Pre-processing data and broadcasting the dictionary..."
 
     lists = data_rdd \
         .map(lambda r: re.compile(r"<[^>]+>").sub('', r)) \
@@ -179,6 +183,8 @@ if __name__ == "__main__":
 
     # Num_words for TW-IDF vectors.
     # ---------------------
+
+    print "Getting word counts and broadcasting IDF values..."
     
     num_words_rdd = sc.parallelize(lists, numSlices=16)
     num_words_doc = num_words_rdd\
@@ -197,6 +203,8 @@ if __name__ == "__main__":
 
     # Build labeled points from data.
     # ---------------------
+
+    print "Building labeled points..."
     
     data_class = zip(data_train, labels_train)
     data_class_rdd = sc.parallelize(data_class, numSlices=16)
@@ -213,6 +221,8 @@ if __name__ == "__main__":
 
     # Train and broadcast the supervised model.
     # ---------------------
+
+    print "Training the model...\n"
 
     # model = SVMWithSGD.train(labeled_rdd, iterations=300)
     model = LogisticRegressionWithLBFGS.train(labeled_rdd)
