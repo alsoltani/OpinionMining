@@ -17,6 +17,7 @@ from nltk.stem.snowball import SnowballStemmer
 try:
     from pyspark import SparkContext
     from pyspark import SparkConf
+    from pyspark.mllib.tree import RandomForest
     from pyspark.mllib.linalg import SparseVector
     from pyspark.mllib.regression import LabeledPoint
     from pyspark.mllib.classification import NaiveBayes
@@ -42,7 +43,7 @@ additional_stops = list(string.ascii_lowercase) + ["adult", "br", "isn", "ll",
                                                    "couldn", "wouldn", "re", "ve"]
 
 
-def create_binary_labeled_point(doc_class, dictionary, window, idf_col):
+def create_binary_labeled_point(doc_class, dictionary, window, idf_col, term_num_docs):
     
     """
     Create the binary labeled points in a TW-IDF fashion.
@@ -79,12 +80,14 @@ def create_binary_labeled_point(doc_class, dictionary, window, idf_col):
         for k, node_term in enumerate(dg.nodes()):
             if node_term in idf_col:
                 if node_term in dictionary:
-                    vector_dict[dictionary[node_term]] = centrality[node_term] * idf_col[node_term]
+                    if term_num_docs[node_term] > 5:  # Arbitrary threshold
+
+                        vector_dict[dictionary[node_term]] = centrality[node_term] * idf_col[node_term]
 
     return LabeledPoint(doc_class[1], SparseVector(len(dictionary), vector_dict))
 
 
-def predict(text, dictionary, window, idf_col, model):
+def predict(text, dictionary, window, idf_col, model, term_num_docs):
     
     """
     Predict label values.
@@ -118,7 +121,9 @@ def predict(text, dictionary, window, idf_col, model):
         for k, node_term in enumerate(dg.nodes()):
             if node_term in idf_col:
                 if node_term in dictionary:
-                    vector_dict[dictionary[node_term]] = centrality[node_term] * idf_col[node_term]
+                    if term_num_docs[node_term] > 5:  # Arbitrary threshold
+
+                        vector_dict[dictionary[node_term]] = centrality[node_term] * idf_col[node_term]
 
     return model.predict(SparseVector(len(dictionary), vector_dict))
 
@@ -149,6 +154,7 @@ if __name__ == "__main__":
     print "Loading data..."
 
     data, Y = lF.load_labeled(current_path + "/Data/train")
+
     data_train, data_test, labels_train, labels_test = train_test_split(data, Y, test_size=0.2, random_state=42)
     data_rdd = sc.parallelize(data_train, numSlices=16)
 
@@ -194,6 +200,7 @@ if __name__ == "__main__":
         .reduceByKey(lambda x, y: x + y).collect()
 
     term_num_docs = dict(num_words_doc)
+    term_num_docs_broad = sc.broadcast(term_num_docs)
 
     idf_col = {}
     for term_x in dict(num_words_doc):
@@ -217,7 +224,8 @@ if __name__ == "__main__":
         create_binary_labeled_point,
         dictionary=dict_broad.value,
         window=sliding_window,
-        idf_col=idf_col_broad.value))
+        idf_col=idf_col_broad.value,
+        term_num_docs=term_num_docs_broad.value))
 
     # Train and broadcast the supervised model.
     # ---------------------
@@ -225,7 +233,8 @@ if __name__ == "__main__":
     print "Training the model...\n"
 
     # model = SVMWithSGD.train(labeled_rdd, iterations=300)
-    model = LogisticRegressionWithLBFGS.train(labeled_rdd)
+    #model = LogisticRegressionWithLBFGS.train(labeled_rdd, regParam=0.003,regType='l1',iterations=500)
+    model = LogisticRegressionWithSGD.train(labeled_rdd)
     mb = sc.broadcast(model)
 
     # Make predictions.
@@ -236,7 +245,8 @@ if __name__ == "__main__":
                      dictionary=dict_broad.value,
                      window=sliding_window,
                      idf_col=idf_col_broad.value,
-                     model=mb.value))\
+                     model=mb.value,
+                     term_num_docs=term_num_docs_broad.value))\
         .collect()
 
     # Classification report.

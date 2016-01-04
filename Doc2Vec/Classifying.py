@@ -1,11 +1,12 @@
 import os
 import numpy as np
 from Doc2VecModel import Doc2VecModel
-from sklearn.cross_validation import train_test_split
+from sklearn.cross_validation import train_test_split, cross_val_score
 from sklearn.datasets import dump_svmlight_file, load_svmlight_file
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import classification_report
 from sklearn.metrics import accuracy_score
+from sklearn.linear_model import SGDClassifier
 from sklearn.metrics import roc_curve, auc
 
 
@@ -84,7 +85,8 @@ if __name__ == "__main__":
     d2v = load_d2v_model()
 
     data_train, data_test, y_train, y_test = create_train_test(25000, d2v)
-    #data_train, data_test, y_train, y_test = load_train_test()
+    # data_train, data_test, y_train, y_test = load_train_test()
 
-    clf = LogisticRegression()
+    clf = LogisticRegression(class_weight="auto", penalty="l2")
     print classification_results(clf, data_train, data_test, y_train, y_test)
+

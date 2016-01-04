@@ -1,17 +1,17 @@
 import numpy as np
 from numpy import float32 as REAL, array, sqrt
-from gensim.models.word2vec import Vocab, Word2Vec
-from gensim.models.doc2vec import TaggedDocument, Doc2Vec
+from word2vec import Vocab, Word2Vec
+from doc2vec import TaggedDocument, Doc2Vec
 from collections import defaultdict
 from operator import add
 
 try:
-    from gensim.models.doc2vec_inner import train_document_dbow
-    from gensim.models.word2vec_inner import FAST_VERSION  # blas-adaptation shared from word2vec
+    from doc2vec_inner import train_document_dbow
+    from word2vec_inner import FAST_VERSION  # blas-adaptation shared from word2vec
 except:
     # failed... fall back to plain numpy (20-80x slower training than the above)
     FAST_VERSION = -1
-    from gensim.models.doc2vec import train_document_dbow
+    from doc2vec import train_document_dbow
 
 
 class DistDoc2VecFast:
